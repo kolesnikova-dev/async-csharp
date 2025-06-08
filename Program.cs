@@ -5,17 +5,17 @@ using System.Threading.Tasks;
 
 class Program
 {
+    private static readonly string catUrl = "https://api.thecatapi.com/v1/images/search";
     public static async Task Main(string[] args)
     {
-        using var httpClient = new HttpClient();
-        Picture picture = new(httpClient);
+        CatFetcher catFetcher = new();
         Console.WriteLine("Fetching a cat picture.");
         try
         {
-            string pictureUrl = await picture.Fetch();
+            string catPictureUrl = await catFetcher.Fetch(catUrl);
             Console.WriteLine("Look at this cat!");
-             Process.Start(new ProcessStartInfo(pictureUrl) 
-            { 
+            Process.Start(new ProcessStartInfo(catPictureUrl)
+            {
                 UseShellExecute = true  // Open the URL
             });
         }
@@ -26,23 +26,26 @@ class Program
     }
 }
 
-public class Picture
+public class CatFetcher
 {
-    private readonly HttpClient _httpClient;
-    public Picture(HttpClient httpClient)
+    public async Task<string> Fetch(string catUrl)
     {
-        _httpClient = httpClient;
-    }
-    public async Task<string> Fetch()
-    {
-        Console.WriteLine("Give me one second...");
-        await Task.Delay(1000);
-        var data = await _httpClient.GetAsync("https://api.thecatapi.com/v1/images/search");
+        using HttpClient client = new HttpClient();
+        await SimulateDelay();
+
+        var data = await client.GetAsync(catUrl);
         data.EnsureSuccessStatusCode();
         var dataJson = await data.Content.ReadAsStringAsync();
         using var jsonDoc = JsonDocument.Parse(dataJson);
-        var firstCat = jsonDoc.RootElement[0];
-        string pictureUrl = firstCat.GetProperty("url").GetString() ?? throw new Exception("No URL found");
+        var firstObj = jsonDoc.RootElement[0];
+        string pictureUrl = firstObj.GetProperty("url").GetString() ?? throw new Exception("No URL found");
+
         return pictureUrl;
+    }
+
+    public async Task SimulateDelay()
+    {
+        Console.WriteLine("Give me one second...");
+        await Task.Delay(1000);
     }
 }
